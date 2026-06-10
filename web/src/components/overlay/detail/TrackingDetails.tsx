@@ -42,6 +42,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { getLifecycleItemDescription } from "@/utils/lifecycleUtil";
 import { useTranslation } from "react-i18next";
+import { useSaveSnapshotToDisk } from "@/hooks/use-save-snapshot-to-disk";
 import { getTranslatedLabel } from "@/utils/i18n";
 import { resolveZoneName } from "@/hooks/use-zone-friendly-name";
 import { Badge } from "@/components/ui/badge";
@@ -663,6 +664,15 @@ export function TrackingDetails({
     return `${apiHost}api/${event.camera}/recordings/${currentTime}/snapshot.jpg?height=500`;
   }, [apiHost, event.camera, currentTime]);
 
+  const saveSnapshotToDisk = useSaveSnapshotToDisk(event.camera);
+  const onSaveSnapshotToDisk = useCallback(async () => {
+    if (!currentTime) {
+      return;
+    }
+
+    await saveSnapshotToDisk(currentTime);
+  }, [currentTime, saveSnapshotToDisk]);
+
   if (!config) {
     return <ActivityIndicator />;
   }
@@ -711,6 +721,7 @@ export function TrackingDetails({
                 onSeekToTime={handleSeekToTime}
                 onUploadFrame={onUploadFrameToPlus}
                 getSnapshotUrl={getSnapshotUrlForPlus}
+                onSaveSnapshot={onSaveSnapshotToDisk}
                 onPlaying={() => setIsVideoLoading(false)}
                 setFullResolution={setFullResolution}
                 toggleFullscreen={toggleFullscreen}

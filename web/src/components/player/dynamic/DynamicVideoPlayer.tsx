@@ -22,6 +22,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { useSaveSnapshotToDisk } from "@/hooks/use-save-snapshot-to-disk";
 import {
   calculateInpointOffset,
   calculateSeekPosition,
@@ -232,6 +233,23 @@ export default function DynamicVideoPlayer({
     [camera, controller, t],
   );
 
+  const saveSnapshotToDisk = useSaveSnapshotToDisk(camera);
+  const onSaveSnapshotToDisk = useCallback(
+    async (playTime: number) => {
+      if (!controller) {
+        return;
+      }
+
+      const time = controller.getProgress(playTime);
+      if (!time) {
+        return;
+      }
+
+      await saveSnapshotToDisk(time);
+    },
+    [controller, saveSnapshotToDisk],
+  );
+
   // state of playback player
 
   const recordingParams = useMemo(
@@ -366,6 +384,7 @@ export default function DynamicVideoPlayer({
           onUploadFrame={onUploadFrameToPlus}
           getSnapshotUrl={getSnapshotUrlForPlus}
           onSnapshot={onDownloadSnapshot}
+          onSaveSnapshot={onSaveSnapshotToDisk}
           toggleFullscreen={toggleFullscreen}
           onError={(error) => {
             if (error == "stalled" && !isScrubbing) {

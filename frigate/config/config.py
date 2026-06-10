@@ -69,6 +69,7 @@ from .mqtt import MqttConfig
 from .network import NetworkingConfig
 from .profile import ProfileDefinitionConfig
 from .proxy import ProxyConfig
+from .save_to_disk import SaveToDiskConfig
 from .telemetry import TelemetryConfig
 from .tls import TlsConfig
 from .ui import UIConfig
@@ -495,6 +496,11 @@ class FrigateConfig(FrigateBaseModel):
         default_factory=UIConfig,
         title="UI",
         description="User interface preferences such as timezone, time/date formatting, and units.",
+    )
+    save_to_disk: SaveToDiskConfig = Field(
+        default_factory=SaveToDiskConfig,
+        title="Save to disk",
+        description="Settings for saving the current video frame to a folder on the Frigate server.",
     )
 
     # Detector config

@@ -1,5 +1,7 @@
 """Unit tests for recordings/media API endpoints."""
 
+import os
+import tempfile
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -617,3 +619,58 @@ class TestHttpMedia(BaseTestHttp):
 
         self.assertEqual(response.status_code, 200)
         upload.assert_called_once_with("frame", "front_door")
+
+    def test_save_snapshot_disabled_returns_400(self):
+        self._insert_recording("snapshot", 1000, 1010)
+
+        with (
+            AuthTestClient(self.app) as client,
+            patch("frigate.api.media.get_image_from_recording") as image,
+        ):
+            response = client.post("/front_door/recordings/1005/save")
+
+        self.assertEqual(response.status_code, 400)
+        image.assert_not_called()
+
+    def test_save_snapshot_miss_returns_404_without_image_lookup(self):
+        self.app.frigate_config.save_to_disk.enabled = True
+
+        with (
+            AuthTestClient(self.app) as client,
+            patch("frigate.api.media.get_image_from_recording") as image,
+        ):
+            response = client.post("/front_door/recordings/1005/save")
+
+        self.assertEqual(response.status_code, 404)
+        image.assert_not_called()
+
+    def test_save_snapshot_invalid_frame_time_returns_422(self):
+        self.app.frigate_config.save_to_disk.enabled = True
+
+        with AuthTestClient(self.app) as client:
+            response = client.post("/front_door/recordings/invalid/save")
+
+        self.assertEqual(response.status_code, 422)
+
+    def test_save_snapshot_hit_writes_image(self):
+        self._insert_recording("snapshot", 1000, 1010)
+        self.app.frigate_config.save_to_disk.enabled = True
+
+        with (
+            tempfile.TemporaryDirectory() as save_dir,
+            AuthTestClient(self.app) as client,
+            patch("frigate.api.media.get_image_from_recording", return_value=b"jpeg"),
+        ):
+            # nested folder verifies the directory is created on demand
+            self.app.frigate_config.save_to_disk.path = os.path.join(save_dir, "saved")
+            response = client.post("/front_door/recordings/1005/save")
+            file_path = response.json()["file"]
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                os.path.dirname(file_path), os.path.join(save_dir, "saved")
+            )
+            self.assertTrue(os.path.basename(file_path).startswith("front_door_"))
+
+            with open(file_path, "rb") as f:
+                self.assertEqual(f.read(), b"jpeg")

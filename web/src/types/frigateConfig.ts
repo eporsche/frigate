@@ -578,6 +578,11 @@ export interface FrigateConfig {
     enabled: boolean;
   };
 
+  save_to_disk: {
+    enabled: boolean;
+    path: string;
+  };
+
   proxy: {
     logout_url?: string;
   };

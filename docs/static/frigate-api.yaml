@@ -5704,6 +5704,47 @@ paths:
         - frigateUserAuth: []
       x-required-role: camera
       description: '**Access:** Authenticated user with access to the referenced camera.'
+  /{camera_name}/recordings/{frame_time}/save:
+    post:
+      tags:
+        - Media
+      summary: Save Recording Snapshot To Disk
+      description: |-
+        **Access:** Authenticated user with access to the referenced camera.
+
+        Save the recording frame at the given time to the save_to_disk folder.
+      operationId: 
+        save_recording_snapshot_to_disk__camera_name__recordings__frame_time__save_post
+      parameters:
+        - name: camera_name
+          in: path
+          required: true
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            title: Camera Name
+        - name: frame_time
+          in: path
+          required: true
+          schema:
+            type: number
+            title: Frame Time
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+        - frigateUserAuth: []
+      x-required-role: camera
   /{camera_name}/start/{start_ts}/end/{end_ts}/clip.mp4:
     get:
       tags:

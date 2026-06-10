@@ -56,6 +56,7 @@ type HlsVideoPlayerProps = {
   onUploadFrame?: (playTime: number) => Promise<AxiosResponse> | undefined;
   getSnapshotUrl?: (playTime: number) => string | undefined;
   onSnapshot?: (playTime: number) => Promise<void> | void;
+  onSaveSnapshot?: (playTime: number) => Promise<void> | void;
   toggleFullscreen?: () => void;
   onError?: (error: RecordingPlayerError) => void;
   isDetailMode?: boolean;
@@ -84,6 +85,7 @@ export default function HlsVideoPlayer({
   onUploadFrame,
   getSnapshotUrl,
   onSnapshot,
+  onSaveSnapshot,
   toggleFullscreen,
   onError,
   isDetailMode = false,
@@ -307,6 +309,23 @@ export default function HlsVideoPlayer({
     }
   }, [getVideoTime, onSnapshot]);
 
+  const [isSaveSnapshotLoading, setIsSaveSnapshotLoading] = useState(false);
+
+  const handleSaveSnapshot = useCallback(async () => {
+    const frameTime = getVideoTime();
+
+    if (!frameTime || !onSaveSnapshot) {
+      return;
+    }
+
+    setIsSaveSnapshotLoading(true);
+    try {
+      await onSaveSnapshot(frameTime);
+    } finally {
+      setIsSaveSnapshotLoading(false);
+    }
+  }, [getVideoTime, onSaveSnapshot]);
+
   return (
     <TransformWrapper
       minScale={1.0}
@@ -331,6 +350,8 @@ export default function HlsVideoPlayer({
             playbackRate: true,
             plusUpload: isAdmin && config?.plus?.enabled == true,
             snapshot: !!onSnapshot,
+            saveSnapshot:
+              !!onSaveSnapshot && config?.save_to_disk?.enabled == true,
             fullscreen: supportsFullscreen,
           }}
           setControlsOpen={setControlsOpen}
@@ -386,6 +407,8 @@ export default function HlsVideoPlayer({
           }}
           onSnapshot={onSnapshot ? handleSnapshot : undefined}
           snapshotLoading={isSnapshotLoading}
+          onSaveSnapshot={onSaveSnapshot ? handleSaveSnapshot : undefined}
+          saveSnapshotLoading={isSaveSnapshotLoading}
           fullscreen={fullscreen}
           toggleFullscreen={toggleFullscreen}
           containerRef={containerRef}

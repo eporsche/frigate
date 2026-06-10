@@ -450,6 +450,106 @@ async def submit_recording_snapshot_to_plus(
         )
 
 
+def _write_snapshot_to_disk(file_path: str, image_data: bytes) -> None:
+    """Write image bytes to the given path, creating the folder if needed."""
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    with open(file_path, "wb") as f:
+        f.write(image_data)
+
+
+@router.post(
+    "/{camera_name}/recordings/{frame_time}/save",
+    dependencies=[Depends(require_camera_access)],
+)
+async def save_recording_snapshot_to_disk(
+    request: Request, camera_name: str, frame_time: float
+):
+    """Save the recording frame at the given time to the save_to_disk folder."""
+    config: FrigateConfig = request.app.frigate_config
+
+    if not config.save_to_disk.enabled:
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": "Saving snapshots to disk is disabled (set save_to_disk.enabled).",
+            },
+            status_code=400,
+        )
+
+    if camera_name not in config.cameras:
+        return JSONResponse(
+            content={"success": False, "message": "Camera not found"},
+            status_code=404,
+        )
+
+    try:
+        recording: Recordings = (
+            Recordings.select(
+                Recordings.path,
+                Recordings.start_time,
+            )
+            .where(
+                (frame_time >= Recordings.start_time)
+                & (frame_time <= Recordings.end_time)
+            )
+            .where(Recordings.camera == camera_name)
+            .order_by(Recordings.start_time.desc())
+            .limit(1)
+            .get()
+        )
+    except DoesNotExist:
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": f"Recording not found at {frame_time}",
+            },
+            status_code=404,
+        )
+
+    # "mjpeg" yields JPEG bytes
+    image_data = await asyncio.to_thread(
+        get_image_from_recording,
+        config.ffmpeg,
+        recording.path,
+        frame_time - recording.start_time,
+        "mjpeg",
+    )
+
+    if not image_data:
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": f"Unable to parse frame at time {frame_time}",
+            },
+            status_code=404,
+        )
+
+    tz = pytz.timezone(config.ui.timezone or get_localzone_name())
+    stamp = datetime.fromtimestamp(frame_time, tz).strftime("%Y%m%d_%H%M%S")
+    file_path = os.path.join(
+        config.save_to_disk.path, sanitize_filename(f"{camera_name}_{stamp}.jpg")
+    )
+
+    try:
+        await asyncio.to_thread(_write_snapshot_to_disk, file_path, image_data)
+    except OSError:
+        logger.exception("Failed to save snapshot to %s", file_path)
+        return JSONResponse(
+            content={"success": False, "message": "Failed to save snapshot to disk"},
+            status_code=500,
+        )
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"Saved snapshot to {file_path}",
+            "file": file_path,
+        },
+        status_code=200,
+    )
+
+
 @router.get(
     "/{camera_name}/start/{start_ts}/end/{end_ts}/clip.mp4",
     dependencies=[Depends(require_camera_access)],

@@ -275,6 +275,18 @@
       "description": "Unit system for display (metric or imperial) used in the UI and MQTT."
     }
   },
+  "save_to_disk": {
+    "label": "Save to disk",
+    "description": "Settings for saving the current video frame to a folder on the Frigate server.",
+    "enabled": {
+      "label": "Enable save to disk",
+      "description": "Enable saving the current video frame to a folder on the Frigate server."
+    },
+    "path": {
+      "label": "Save path",
+      "description": "Directory on the Frigate server where saved frames are written."
+    }
+  },
   "detectors": {
     "label": "Detector hardware",
     "description": "Configuration for object detectors (CPU, GPU, ONNX backends) and any detector-specific model settings.",

@@ -43,10 +43,12 @@
   },
   "toast": {
     "success": {
-      "submittedFrigatePlus": "Successfully submitted frame to Frigate+"
+      "submittedFrigatePlus": "Successfully submitted frame to Frigate+",
+      "savedSnapshotToDisk": "Saved snapshot to {{file}}"
     },
     "error": {
-      "submitFrigatePlusFailed": "Failed to submit frame to Frigate+"
+      "submitFrigatePlusFailed": "Failed to submit frame to Frigate+",
+      "saveSnapshotToDiskFailed": "Failed to save snapshot to disk"
     }
   }
 }

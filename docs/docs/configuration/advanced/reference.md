@@ -1130,6 +1130,13 @@ ui:
   # Used in the UI and in MQTT topics
   unit_system: metric
 
+# Optional: Save the current video frame to a folder on the Frigate server
+save_to_disk:
+  # Optional: Enable the save to disk button in the recording player (default: shown below)
+  enabled: False
+  # Optional: Directory on the Frigate server where saved frames are written (default: shown below)
+  path: /media/frigate/snapshots
+
 # Optional: Telemetry configuration
 telemetry:
   # Optional: Enabled network interfaces for bandwidth stats monitoring (default: empty list, let nethogs search all)
