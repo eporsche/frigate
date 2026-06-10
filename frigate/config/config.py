@@ -69,6 +69,7 @@ from .network import NetworkingConfig
 from .proxy import ProxyConfig
 from .telemetry import TelemetryConfig
 from .tls import TlsConfig
+from .save_to_disk import SaveToDiskConfig
 from .ui import UIConfig
 
 __all__ = ["FrigateConfig"]
@@ -337,6 +338,10 @@ class FrigateConfig(FrigateBaseModel):
     )
     tls: TlsConfig = Field(default_factory=TlsConfig, title="TLS configuration.")
     ui: UIConfig = Field(default_factory=UIConfig, title="UI configuration.")
+    save_to_disk: SaveToDiskConfig = Field(
+        default_factory=SaveToDiskConfig,
+        title="Settings for saving the current video frame to a folder on the Frigate server.",
+    )
 
     # Detector config
     detectors: Dict[str, BaseDetectorConfig] = Field(

@@ -12,6 +12,7 @@ import { TimeRange } from "@/types/timeline";
 import ActivityIndicator from "@/components/indicators/activity-indicator";
 import { VideoResolutionType } from "@/types/live";
 import axios from "axios";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import {
@@ -172,6 +173,35 @@ export default function DynamicVideoPlayer({
     [camera, controller],
   );
 
+  const onSaveSnapshotToDisk = useCallback(
+    async (playTime: number) => {
+      if (!controller) {
+        return;
+      }
+
+      const time = controller.getProgress(playTime);
+      try {
+        const resp = await axios.post(`/${camera}/recordings/${time}/save`);
+        if (resp.status === 200) {
+          toast.success(resp.data?.message ?? "Saved snapshot to server.", {
+            position: "top-center",
+          });
+        } else {
+          toast.error(resp.data?.message ?? "Failed to save snapshot.", {
+            position: "top-center",
+          });
+        }
+      } catch (e) {
+        const message =
+          axios.isAxiosError(e) && e.response?.data?.message
+            ? e.response.data.message
+            : "Failed to save snapshot.";
+        toast.error(message, { position: "top-center" });
+      }
+    },
+    [camera, controller],
+  );
+
   // state of playback player
 
   const recordingParams = useMemo(
@@ -303,6 +333,7 @@ export default function DynamicVideoPlayer({
           }}
           setFullResolution={setFullResolution}
           onUploadFrame={onUploadFrameToPlus}
+          onSaveSnapshot={onSaveSnapshotToDisk}
           toggleFullscreen={toggleFullscreen}
           onError={(error) => {
             if (error == "stalled" && !isScrubbing) {

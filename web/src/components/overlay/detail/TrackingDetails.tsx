@@ -561,6 +561,32 @@ export function TrackingDetails({
     return axios.post(`/${event.camera}/plus/${currentTime}`);
   }, [event.camera, currentTime]);
 
+  const onSaveSnapshotToDisk = useCallback(async () => {
+    if (!currentTime) {
+      return;
+    }
+    try {
+      const resp = await axios.post(
+        `/${event.camera}/recordings/${currentTime}/save`,
+      );
+      if (resp.status === 200) {
+        toast.success(resp.data?.message ?? "Saved snapshot to server.", {
+          position: "top-center",
+        });
+      } else {
+        toast.error(resp.data?.message ?? "Failed to save snapshot.", {
+          position: "top-center",
+        });
+      }
+    } catch (e) {
+      const message =
+        axios.isAxiosError(e) && e.response?.data?.message
+          ? e.response.data.message
+          : "Failed to save snapshot.";
+      toast.error(message, { position: "top-center" });
+    }
+  }, [event.camera, currentTime]);
+
   if (!config) {
     return <ActivityIndicator />;
   }
@@ -608,6 +634,7 @@ export function TrackingDetails({
                 onTimeUpdate={handleTimeUpdate}
                 onSeekToTime={handleSeekToTime}
                 onUploadFrame={onUploadFrameToPlus}
+                onSaveSnapshot={onSaveSnapshotToDisk}
                 onPlaying={() => setIsVideoLoading(false)}
                 setFullResolution={setFullResolution}
                 isDetailMode={true}

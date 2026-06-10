@@ -52,6 +52,7 @@ type HlsVideoPlayerProps = {
   onSeekToTime?: (timestamp: number, play?: boolean) => void;
   setFullResolution?: React.Dispatch<React.SetStateAction<VideoResolutionType>>;
   onUploadFrame?: (playTime: number) => Promise<AxiosResponse> | undefined;
+  onSaveSnapshot?: (playTime: number) => Promise<void> | void;
   toggleFullscreen?: () => void;
   onError?: (error: RecordingPlayerError) => void;
   isDetailMode?: boolean;
@@ -76,6 +77,7 @@ export default function HlsVideoPlayer({
   onSeekToTime,
   setFullResolution,
   onUploadFrame,
+  onSaveSnapshot,
   toggleFullscreen,
   onError,
   isDetailMode = false,
@@ -268,6 +270,23 @@ export default function HlsVideoPlayer({
     return currentTime + inpointOffset;
   }, [videoRef, inpointOffset]);
 
+  const [isSaveSnapshotLoading, setIsSaveSnapshotLoading] = useState(false);
+
+  const handleSaveSnapshot = useCallback(async () => {
+    const frameTime = getVideoTime();
+
+    if (!frameTime || !onSaveSnapshot) {
+      return;
+    }
+
+    setIsSaveSnapshotLoading(true);
+    try {
+      await onSaveSnapshot(frameTime);
+    } finally {
+      setIsSaveSnapshotLoading(false);
+    }
+  }, [getVideoTime, onSaveSnapshot]);
+
   return (
     <TransformWrapper
       minScale={1.0}
@@ -291,6 +310,7 @@ export default function HlsVideoPlayer({
             seek: true,
             playbackRate: true,
             plusUpload: isAdmin && config?.plus?.enabled == true,
+            saveSnapshot: !!onSaveSnapshot,
             fullscreen: supportsFullscreen,
           }}
           setControlsOpen={setControlsOpen}
@@ -331,6 +351,8 @@ export default function HlsVideoPlayer({
               }
             }
           }}
+          onSaveSnapshot={onSaveSnapshot ? handleSaveSnapshot : undefined}
+          saveSnapshotLoading={isSaveSnapshotLoading}
           fullscreen={fullscreen}
           toggleFullscreen={toggleFullscreen}
           containerRef={containerRef}

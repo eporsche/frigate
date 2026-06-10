@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { isDesktop, isMobileOnly, isSafari } from "react-device-detect";
-import { LuPause, LuPlay } from "react-icons/lu";
+import { LuPause, LuPlay, LuSave } from "react-icons/lu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +40,7 @@ type VideoControls = {
   seek?: boolean;
   playbackRate?: boolean;
   plusUpload?: boolean;
+  saveSnapshot?: boolean;
   fullscreen?: boolean;
 };
 
@@ -48,6 +49,7 @@ const CONTROLS_DEFAULT: VideoControls = {
   seek: true,
   playbackRate: true,
   plusUpload: false,
+  saveSnapshot: false,
   fullscreen: false,
 };
 const PLAYBACK_RATE_DEFAULT = isSafari ? [0.5, 1, 2] : [0.5, 1, 2, 4, 8, 16];
@@ -71,6 +73,8 @@ type VideoControlsProps = {
   onSeek: (diff: number) => void;
   onSetPlaybackRate: (rate: number) => void;
   onUploadFrame?: () => void;
+  onSaveSnapshot?: () => void;
+  saveSnapshotLoading?: boolean;
   toggleFullscreen?: () => void;
   containerRef?: React.MutableRefObject<HTMLDivElement | null>;
 };
@@ -92,6 +96,8 @@ export default function VideoControls({
   onSeek,
   onSetPlaybackRate,
   onUploadFrame,
+  onSaveSnapshot,
+  saveSnapshotLoading = false,
   toggleFullscreen,
   containerRef,
 }: VideoControlsProps) {
@@ -290,6 +296,25 @@ export default function VideoControls({
           onUploadFrame={onUploadFrame}
           containerRef={containerRef}
           fullscreen={fullscreen}
+        />
+      )}
+      {features.saveSnapshot && onSaveSnapshot && (
+        <LuSave
+          className={cn(
+            "size-5",
+            saveSnapshotLoading
+              ? "cursor-not-allowed opacity-50"
+              : "cursor-pointer",
+          )}
+          onClick={(e: React.MouseEvent<SVGElement>) => {
+            e.stopPropagation();
+
+            if (saveSnapshotLoading) {
+              return;
+            }
+
+            onSaveSnapshot();
+          }}
         />
       )}
       {features.fullscreen && toggleFullscreen && (

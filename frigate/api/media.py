@@ -726,6 +726,93 @@ async def no_recordings(
     return JSONResponse(content=no_recording_segments)
 
 
+@router.post(
+    "/{camera_name}/recordings/{frame_time}/save",
+    dependencies=[Depends(require_camera_access)],
+)
+async def save_recording_snapshot_to_disk(
+    request: Request, camera_name: str, frame_time: str
+):
+    config: FrigateConfig = request.app.frigate_config
+
+    if not config.save_to_disk.enabled:
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": "Saving snapshots to disk is disabled (set save_to_disk.enabled).",
+            },
+            status_code=400,
+        )
+
+    if camera_name not in config.cameras:
+        return JSONResponse(
+            content={"success": False, "message": "Camera not found"},
+            status_code=404,
+        )
+
+    frame_time = float(frame_time)
+    recording_query = (
+        Recordings.select(
+            Recordings.path,
+            Recordings.start_time,
+        )
+        .where(
+            (
+                (frame_time >= Recordings.start_time)
+                & (frame_time <= Recordings.end_time)
+            )
+        )
+        .where(Recordings.camera == camera_name)
+        .order_by(Recordings.start_time.desc())
+        .limit(1)
+    )
+
+    try:
+        recording: Recordings = recording_query.get()
+        time_in_segment = frame_time - recording.start_time
+        # "mjpeg" yields JPEG bytes
+        image_data = get_image_from_recording(
+            config.ffmpeg, recording.path, time_in_segment, "mjpeg"
+        )
+
+        if not image_data:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "message": f"Unable to parse frame at time {frame_time}",
+                },
+                status_code=404,
+            )
+
+        save_dir = config.save_to_disk.path
+        os.makedirs(save_dir, exist_ok=True)
+
+        tz = pytz.timezone(config.ui.timezone or get_localzone_name())
+        stamp = datetime.fromtimestamp(frame_time, tz).strftime("%Y%m%d_%H%M%S")
+        filename = sanitize_filename(f"{camera_name}_{stamp}.jpg")
+        file_path = os.path.join(save_dir, filename)
+
+        with open(file_path, "wb") as f:
+            f.write(image_data)
+
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": f"Saved snapshot to {file_path}",
+                "file": file_path,
+            },
+            status_code=200,
+        )
+    except DoesNotExist:
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": "Recording not found at {}".format(frame_time),
+            },
+            status_code=404,
+        )
+
+
 @router.get(
     "/{camera_name}/start/{start_ts}/end/{end_ts}/clip.mp4",
     dependencies=[Depends(require_camera_access)],
