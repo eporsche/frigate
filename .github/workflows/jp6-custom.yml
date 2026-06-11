@@ -1,0 +1,58 @@
+name: Build TensorRT JP6 (custom)
+
+# Builds ONLY the Jetson JetPack 6 image from this fork, including the
+# save-to-disk patch. Pushes to this fork's GHCR namespace:
+#   ghcr.io/<owner>/frigate:<branch>-tensorrt-jp6
+#
+# Triggers: manual (Actions tab) or any push to a savedisk-* branch.
+# Requires GitHub-hosted arm64 runners (free for PUBLIC repos).
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "savedisk-*"
+    paths-ignore:
+      - "docs/**"
+
+env:
+  PYTHON_VERSION: 3.11
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  jetson_jp6_build:
+    runs-on: ubuntu-22.04-arm
+    name: Jetson Jetpack 6 (custom)
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - id: lc
+        uses: ASzc/change-string-case-action@v6
+        with:
+          string: ${{ github.repository }}
+      - name: Set up QEMU and Buildx
+        id: setup
+        uses: ./.github/actions/setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push TensorRT (Jetson, Jetpack 6)
+        env:
+          ARCH: arm64
+          BASE_IMAGE: nvcr.io/nvidia/tensorrt:23.12-py3-igpu
+          SLIM_BASE: nvcr.io/nvidia/tensorrt:23.12-py3-igpu
+          TRT_BASE: nvcr.io/nvidia/tensorrt:23.12-py3-igpu
+        uses: docker/bake-action@v6
+        with:
+          source: .
+          push: true
+          targets: tensorrt
+          files: docker/tensorrt/trt.hcl
+          set: |
+            tensorrt.tags=ghcr.io/${{ steps.lc.outputs.lowercase }}:${{ github.ref_name }}-tensorrt-jp6
+            *.cache-from=type=registry,ref=ghcr.io/${{ steps.lc.outputs.lowercase }}:cache-${{ github.ref_name }}-jp6
+            *.cache-to=type=registry,ref=ghcr.io/${{ steps.lc.outputs.lowercase }}:cache-${{ github.ref_name }}-jp6,mode=max
