@@ -35,11 +35,21 @@ jobs:
         uses: ASzc/change-string-case-action@v6
         with:
           string: ${{ github.repository }}
-      - name: Set up QEMU and Buildx
-        id: setup
-        uses: ./.github/actions/setup
+      # The shared ./.github/actions/setup is not used here: its
+      # maximize-build-space step fills the root disk on single-disk arm64
+      # runners, which already have enough free space for this build.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create version file
+        run: make version
       - name: Build and push TensorRT (Jetson, Jetpack 6)
         env:
           ARCH: arm64
